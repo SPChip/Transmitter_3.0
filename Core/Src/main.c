@@ -31,7 +31,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define I2C_ADDRESS                                              0x26
+#define I2C_ID_ADDRESS                                           0x26
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -42,6 +43,8 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 DMA_HandleTypeDef hdma_adc1;
+
+I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim3;
 TIM_HandleTypeDef htim4;
@@ -70,6 +73,8 @@ uint16_t adcData[7];
 uint8_t transmit_data[20];
 uint32_t tx_time;
 
+uint8_t regData = 0;
+uint8_t regAddress = I2C_ID_ADDRESS;
 
 /* USER CODE END PV */
 
@@ -81,6 +86,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -123,6 +129,7 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_ADC1_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 	__HAL_TIM_SET_COUNTER(&htim3, encoders_start_counter);
 	HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
@@ -182,12 +189,12 @@ int main(void)
 		}
 
 		//обработка кнопки энкодера 1
-		if (HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin)) {
+		if (HAL_GPIO_ReadPin(ENCODER_1_KEY_GPIO_Port, ENCODER_1_KEY_Pin)) {
 			encoder_1_key_flag = 1;
 		}
 		if (encoder_1_key_flag) {
 			uint32_t ms = HAL_GetTick();
-			uint8_t key1_state = HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin);
+			uint8_t key1_state = HAL_GPIO_ReadPin(ENCODER_1_KEY_GPIO_Port, ENCODER_1_KEY_Pin);
 			if (key1_state == 0 && !encoder_1_key_short_state && (ms - encoder_1_key_time) > 50) {
 				encoder_1_key_short_state = 1;
 				encoder_1_key_long_state = 0;
@@ -208,12 +215,12 @@ int main(void)
 		}
 
 		//обработка кнопки энкодера 2
-		if (HAL_GPIO_ReadPin(KEY_2_GPIO_Port, KEY_2_Pin)) {
+		if (HAL_GPIO_ReadPin(ENCODER_2_KEY_GPIO_Port, ENCODER_2_KEY_Pin)) {
 			encoder_2_key_flag = 1;
 		}
 		if (encoder_2_key_flag) {
 			uint32_t ms_2 = HAL_GetTick();
-			uint8_t key2_state = HAL_GPIO_ReadPin(KEY_2_GPIO_Port, KEY_2_Pin);
+			uint8_t key2_state = HAL_GPIO_ReadPin(ENCODER_2_KEY_GPIO_Port, ENCODER_2_KEY_Pin);
 			if (key2_state == 0 && !encoder_2_key_encoder_1_key_short_state && (ms_2 - encoder_2_key_time) > 50) {
 				encoder_2_key_encoder_1_key_short_state = 1;
 				encoder_2_key_encoder_1_key_long_state = 0;
@@ -240,6 +247,9 @@ int main(void)
 		transmit_data[3]=adcData[5]*255/4095;
 		//(x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 
+		//запрос в расширитель портов pcf8575
+
+		HAL_I2C_Master_Transmit_IT(&hi2c1, (I2C_ADDRESS << 1), &regAddress, 1);
 
 		//отправка данных в uart
 		if (HAL_GetTick() - tx_time > 100) { //каждые 100 мс
@@ -408,6 +418,40 @@ static void MX_ADC1_Init(void)
 }
 
 /**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
   * @brief TIM3 Initialization Function
   * @param None
   * @retval None
@@ -571,8 +615,8 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
-  /*Configure GPIO pins : KEY_Pin KEY_2_Pin */
-  GPIO_InitStruct.Pin = KEY_Pin|KEY_2_Pin;
+  /*Configure GPIO pins : ENCODER_1_KEY_Pin ENCODER_2_KEY_Pin */
+  GPIO_InitStruct.Pin = ENCODER_1_KEY_Pin|ENCODER_2_KEY_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -582,6 +626,16 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+  HAL_I2C_Master_Receive_IT(&hi2c1, (I2C_ADDRESS << 1), &regData, 1);
+}
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+  // I2C data ready!
+}
+
 
 /* USER CODE END 4 */
 

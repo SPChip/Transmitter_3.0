@@ -57,10 +57,10 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define KEY_Pin GPIO_PIN_10
-#define KEY_GPIO_Port GPIOB
-#define KEY_2_Pin GPIO_PIN_11
-#define KEY_2_GPIO_Port GPIOB
+#define ENCODER_1_KEY_Pin GPIO_PIN_10
+#define ENCODER_1_KEY_GPIO_Port GPIOB
+#define ENCODER_2_KEY_Pin GPIO_PIN_11
+#define ENCODER_2_KEY_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

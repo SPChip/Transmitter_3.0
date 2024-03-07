@@ -31,8 +31,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define I2C_ADDRESS                                              0x26
-#define I2C_ID_ADDRESS                                           0x26
+#define I2C_ADDRESS                                              0x20
+#define I2C_ID_ADDRESS                                           0x20
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -47,7 +47,6 @@ DMA_HandleTypeDef hdma_adc1;
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim3;
-TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart1;
 
@@ -84,7 +83,6 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM3_Init(void);
-static void MX_TIM4_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
@@ -127,14 +125,13 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_TIM3_Init();
-  MX_TIM4_Init();
   MX_ADC1_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 	__HAL_TIM_SET_COUNTER(&htim3, encoders_start_counter);
 	HAL_TIM_Encoder_Start(&htim3, TIM_CHANNEL_ALL);
-	__HAL_TIM_SET_COUNTER(&htim4, encoders_start_counter);
-	HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
+//	__HAL_TIM_SET_COUNTER(&htim4, encoders_start_counter);
+//	HAL_TIM_Encoder_Start(&htim4, TIM_CHANNEL_ALL);
 
 	HAL_ADCEx_Calibration_Start(&hadc1);//калибровка ADC
 	HAL_ADC_Start_DMA(&hadc1, (uint32_t*)adcData, 7);
@@ -169,6 +166,7 @@ int main(void)
 			}
 			encoder_1_prev_counter = encoder_1_cur_counter;
 		}
+		/*
 		//обработка энкодера 2
 		encoder_2_encoder_1_cur_counter = __HAL_TIM_GET_COUNTER(&htim4);
 		if (encoder_2_encoder_1_cur_counter != encoder_2_encoder_1_prev_counter) {
@@ -187,7 +185,7 @@ int main(void)
 			}
 			encoder_2_encoder_1_prev_counter = encoder_2_encoder_1_cur_counter;
 		}
-
+*/
 		//обработка кнопки энкодера 1
 		if (HAL_GPIO_ReadPin(ENCODER_1_KEY_GPIO_Port, ENCODER_1_KEY_Pin)) {
 			encoder_1_key_flag = 1;
@@ -250,6 +248,10 @@ int main(void)
 		//запрос в расширитель портов pcf8575
 
 		HAL_I2C_Master_Transmit_IT(&hi2c1, (I2C_ADDRESS << 1), &regAddress, 1);
+
+
+
+
 
 		//отправка данных в uart
 		if (HAL_GetTick() - tx_time > 100) { //каждые 100 мс
@@ -501,55 +503,6 @@ static void MX_TIM3_Init(void)
 }
 
 /**
-  * @brief TIM4 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM4_Init(void)
-{
-
-  /* USER CODE BEGIN TIM4_Init 0 */
-
-  /* USER CODE END TIM4_Init 0 */
-
-  TIM_Encoder_InitTypeDef sConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM4_Init 1 */
-
-  /* USER CODE END TIM4_Init 1 */
-  htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 0;
-  htim4.Init.CounterMode = TIM_COUNTERMODE_CENTERALIGNED1;
-  htim4.Init.Period = 65535;
-  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  sConfig.EncoderMode = TIM_ENCODERMODE_TI1;
-  sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
-  sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
-  sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC1Filter = 10;
-  sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
-  sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
-  sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 0;
-  if (HAL_TIM_Encoder_Init(&htim4, &sConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM4_Init 2 */
-
-  /* USER CODE END TIM4_Init 2 */
-
-}
-
-/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -629,11 +582,14 @@ static void MX_GPIO_Init(void)
 
 void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
-  HAL_I2C_Master_Receive_IT(&hi2c1, (I2C_ADDRESS << 1), &regData, 1);
+	transmit_data[17]= 44;
+	HAL_I2C_Master_Receive_IT(&hi2c1, (I2C_ADDRESS << 1), &regData, 1);
 }
 void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
   // I2C data ready!
+	transmit_data[19]= regData;
+	transmit_data[18]= 55;
 }
 
 
